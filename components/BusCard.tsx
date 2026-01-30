@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Bus } from '../types';
 
 interface Props {
@@ -7,12 +8,22 @@ interface Props {
 }
 
 const BusCard: React.FC<Props> = ({ bus }) => {
+  const navigate = useNavigate();
   const isFull = bus.availableSeats === 0;
 
+  const handleViewSeats = () => {
+    if (!isFull) {
+      navigate(`/bus/${bus.id}`);
+    }
+  };
+
   return (
-    <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all mb-4 border border-white hover:border-blue-100 group overflow-hidden">
+    <div
+      className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all mb-4 border border-white hover:border-blue-100 group overflow-hidden cursor-pointer"
+      onClick={handleViewSeats}
+    >
       <div className="p-5 flex flex-col md:flex-row items-stretch gap-6">
-        
+
         {/* BUS INFO */}
         <div className="flex-1">
           <div className="flex justify-between items-start mb-4">
@@ -68,14 +79,17 @@ const BusCard: React.FC<Props> = ({ bus }) => {
                 {isFull ? 'Fully Booked' : `${bus.availableSeats} Seats Available`}
               </span>
             </div>
-            
-            <button 
+
+            <button
               disabled={isFull}
-              className={`w-full py-3 px-4 rounded-full font-black text-sm uppercase tracking-wider transition-all shadow-sm ${
-                isFull 
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+              onClick={(e) => {
+                e.stopPropagation();
+                handleViewSeats();
+              }}
+              className={`w-full py-3 px-4 rounded-full font-black text-sm uppercase tracking-wider transition-all shadow-sm ${isFull
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                   : 'bg-mmt-blue text-white hover:bg-mmt-hover active:scale-95 shadow-blue-100'
-              }`}
+                }`}
             >
               {isFull ? 'Sold Out' : 'View Seats'}
             </button>
@@ -85,18 +99,18 @@ const BusCard: React.FC<Props> = ({ bus }) => {
 
       {/* AMENITIES */}
       <div className="bg-gray-50 border-t border-gray-100 px-5 py-2.5 flex items-center justify-between">
-         <div className="flex items-center gap-4">
-            <span className="text-[11px] text-gray-500 font-bold flex items-center gap-1">
-              <span className="opacity-50">⚡</span> Charging Point
-            </span>
-            <span className="text-[11px] text-gray-500 font-bold flex items-center gap-1">
-              <span className="opacity-50">🚿</span> Sanitized
-            </span>
-            <span className="text-[11px] text-gray-500 font-bold flex items-center gap-1">
-              <span className="opacity-50">📱</span> M-Ticket
-            </span>
-         </div>
-         <a href="#" className="text-[11px] text-mmt-blue font-bold hover:underline">Policies & Details</a>
+        <div className="flex items-center gap-4">
+          <span className="text-[11px] text-gray-500 font-bold flex items-center gap-1">
+            <span className="opacity-50">⚡</span> Charging Point
+          </span>
+          <span className="text-[11px] text-gray-500 font-bold flex items-center gap-1">
+            <span className="opacity-50">🚿</span> Sanitized
+          </span>
+          <span className="text-[11px] text-gray-500 font-bold flex items-center gap-1">
+            <span className="opacity-50">📱</span> M-Ticket
+          </span>
+        </div>
+        <a href="#" className="text-[11px] text-mmt-blue font-bold hover:underline">Policies & Details</a>
       </div>
     </div>
   );
