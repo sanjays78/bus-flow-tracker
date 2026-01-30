@@ -9,12 +9,14 @@ import {
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../services/firebase';
+import { UserRole } from '../types';
 
 interface UserData {
     uid: string;
     email: string;
     name?: string;
     phone?: string;
+    role: UserRole;
     createdAt?: any;
     updatedAt?: any;
     [key: string]: any;
@@ -28,6 +30,7 @@ interface AuthContextType {
     login: (email: string, password: string) => Promise<UserCredential>;
     logout: () => Promise<void>;
     isAuthenticated: boolean;
+    isAdmin: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -69,10 +72,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const signup = async (email: string, password: string, additionalData: any = {}) => {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        // Create user document in Firestore
+        // Create user document in Firestore with default role
         await setDoc(doc(db, 'users', userCredential.user.uid), {
             email: email,
             uid: userCredential.user.uid,
+            role: 'user' as UserRole, // Default role
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
             ...additionalData
@@ -95,7 +99,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         signup,
         login,
         logout,
-        isAuthenticated: !!user
+        isAuthenticated: !!user,
+        isAdmin: userData?.role === 'admin'
     };
 
     return (
