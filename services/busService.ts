@@ -1,10 +1,28 @@
 
 import { db } from './firebase';
-import { collection, getDocs, query, where, writeBatch, doc } from 'firebase/firestore';
-import { Bus } from '../types';
+import {
+    collection,
+    getDocs,
+    getDoc,
+    query,
+    writeBatch,
+    doc,
+    addDoc,
+    updateDoc,
+    deleteDoc,
+    serverTimestamp
+} from 'firebase/firestore';
+import { Bus, SeatLayout } from '../types';
 import { MOCK_BUSES } from '../constants';
 
 const BUS_COLLECTION = 'buses';
+
+// Default seat layout for buses
+const DEFAULT_SEAT_LAYOUT: SeatLayout = {
+    rows: 10,
+    seatsPerRow: 4,
+    aisleAfter: 2,
+};
 
 export const seedBuses = async () => {
     try {
@@ -16,8 +34,15 @@ export const seedBuses = async () => {
             const batch = writeBatch(db);
 
             MOCK_BUSES.forEach((bus) => {
-                const docRef = doc(busesRef, bus.id); // Use the existing ID
-                batch.set(docRef, bus);
+                const docRef = doc(busesRef, bus.id);
+                // Add default seat layout and amenities
+                batch.set(docRef, {
+                    ...bus,
+                    seatLayout: DEFAULT_SEAT_LAYOUT,
+                    amenities: ['Charging Point', 'Reading Light'],
+                    operator: bus.name.split(' ')[0],
+                    images: [],
+                });
             });
 
             await batch.commit();
@@ -31,23 +56,12 @@ export const seedBuses = async () => {
 export const findBuses = async (source: string, destination: string): Promise<Bus[]> => {
     try {
         const busesRef = collection(db, BUS_COLLECTION);
-        // Note: Firestore is case sensitive. For a real app, you might want to normalize specific fields 
-        // or use a search service like Algolia. For now, we will query as-is, but in the app 
-        // we should make sure we match the case in the DB (MOCK_BUSES has Title Case).
-
-        // Create a query against the collection.
-        // We can filter on client side if needed/preferred for case-insensitivity, 
-        // but let's try to query exactly if possible or fetch all and filter client side 
-        // if the dataset is small (it is small here).
-
-        // Fetching all for client-side filtering (better for this demo to support case-insensitive search easily
-        // without complex Firestore setup)
         const q = query(busesRef);
         const querySnapshot = await getDocs(q);
 
         const buses: Bus[] = [];
-        querySnapshot.forEach((doc) => {
-            buses.push(doc.data() as Bus);
+        querySnapshot.forEach((docSnapshot) => {
+            buses.push({ id: docSnapshot.id, ...docSnapshot.data() } as Bus);
         });
 
         return buses.filter(bus =>
@@ -60,3 +74,85 @@ export const findBuses = async (source: string, destination: string): Promise<Bu
         return [];
     }
 };
+
+// Get a single bus by ID
+export const getBusById = async (busId: string): Promise<Bus | null> => {
+    try {
+        const docRef = doc(db, BUS_COLLECTION, busId);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+            return {
+                id: docSnap.id,
+                ...docSnap.data()
+            } as Bus;
+        }
+        return null;
+    } catch (error) {
+        console.error('Error fetching bus:', error);
+        throw error;
+    }
+};
+
+// Get all buses
+export const getAllBuses = async (): Promise<Bus[]> => {
+    try {
+        const busesRef = collection(db, BUS_COLLECTION);
+        const snapshot = await getDocs(busesRef);
+
+        return snapshot.docs.map(docSnapshot => ({
+            id: docSnapshot.id,
+            ...docSnapshot.data()
+        } as Bus));
+    } catch (error) {
+        console.error('Error fetching all buses:', error);
+        throw error;
+    }
+};
+
+// Create a new bus (Admin)
+export const createBus = async (busData: Omit<Bus, 'id'>): Promise<Bus> => {
+    try {
+        const docRef = await addDoc(collection(db, BUS_COLLECTION), {
+            ...busData,
+            seatLayout: busData.seatLayout || DEFAULT_SEAT_LAYOUT,
+            amenities: busData.amenities || [],
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+        });
+
+        return {
+            id: docRef.id,
+            ...busData,
+        } as Bus;
+    } catch (error) {
+        console.error('Error creating bus:', error);
+        throw error;
+    }
+};
+
+// Update an existing bus (Admin)
+export const updateBus = async (busId: string, busData: Partial<Bus>): Promise<void> => {
+    try {
+        const docRef = doc(db, BUS_COLLECTION, busId);
+        await updateDoc(docRef, {
+            ...busData,
+            updatedAt: serverTimestamp(),
+        });
+    } catch (error) {
+        console.error('Error updating bus:', error);
+        throw error;
+    }
+};
+
+// Delete a bus (Admin)
+export const deleteBus = async (busId: string): Promise<void> => {
+    try {
+        const docRef = doc(db, BUS_COLLECTION, busId);
+        await deleteDoc(docRef);
+    } catch (error) {
+        console.error('Error deleting bus:', error);
+        throw error;
+    }
+};
+
