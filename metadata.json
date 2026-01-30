@@ -1,0 +1,7 @@
+{
+  "name": "BusFlow - Bus Availability Finder",
+  "description": "A streamlined web platform for passengers and students to check real-time bus availability and schedules for their routes.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
